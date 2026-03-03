@@ -12,11 +12,14 @@ env._max_episode_steps = 1000
 # Create empty Q-table (dictionary)
 Q = createEmptyQTable()
 
-# Hyperparameters
-alpha = 0.1
-gamma = 0.9
+
+alpha = 0.05
+gamma = 0.99
 epsilon = 1.0
 episodes = 50000
+epsilon_decay_type = "exp"   
+
+
 
 total_score = np.zeros(episodes)
 score = 0
@@ -40,14 +43,14 @@ for i in range(episodes):
         else:
             action = maxAction(Q, state)
 
-        # Take step (Gymnasium API)
+        # Take step
         next_observation, reward, terminated, truncated, _ = env.step(action)
         done = terminated or truncated
         next_state = getState(next_observation)
 
         score += reward
 
-        # TRUE Q-LEARNING UPDATE (Off-policy)
+        # TRUE Q-learning update
         best_next_action = maxAction(Q, next_state)
 
         Q[(state, action)] += alpha * (
@@ -60,22 +63,34 @@ for i in range(episodes):
 
     total_score[i] = score
 
-    # Linear epsilon decay
-    epsilon = epsilon - 2 / episodes if epsilon > 0.01 else 0.01
+    
+    if epsilon_decay_type == "linear_fast":
+        epsilon = epsilon - 2 / episodes if epsilon > 0.01 else 0.01
 
+    elif epsilon_decay_type == "linear_slow":
+        epsilon = epsilon - 1 / episodes if epsilon > 0.01 else 0.01
+
+    elif epsilon_decay_type == "exp":
+        epsilon = max(0.01, epsilon * 0.995)
 
 
 os.makedirs("results/mountaincar", exist_ok=True)
 
-save_obj(Q, "results/mountaincar/Q-table-Qlearning")
-np.save("results/mountaincar/total_score_qlearning.npy", total_score)
+experiment_name = f"Qlearning_a{alpha}_g{gamma}_{epsilon_decay_type}"
+
+save_obj(Q, f"results/mountaincar/{experiment_name}")
+np.save(f"results/mountaincar/score_{experiment_name}.npy", total_score)
 
 plt.plot(total_score)
 plt.xlabel("Episode")
 plt.ylabel("Total Reward")
-plt.title("Q-Learning - MountainCar")
-plt.savefig("results/mountaincar/qlearning_curve.png")
+plt.title(f"Q-Learning ({experiment_name})")
+plt.savefig(f"results/mountaincar/{experiment_name}.png")
 plt.close()
 
+
+final_avg = np.mean(total_score[-100:])
+
 print("\nQ-Learning Training Complete")
-print("Average reward (last 100 episodes):", np.mean(total_score[-100:]))
+print("Experiment:", experiment_name)
+print("Average reward (last 100 episodes):", final_avg)
