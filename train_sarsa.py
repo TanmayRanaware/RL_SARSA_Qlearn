@@ -5,16 +5,16 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-# Create environment
+
 env = gym.make('MountainCar-v0')
 env._max_episode_steps = 1000
 
-# Create empty Q-table (dictionary)
+
 Q = createEmptyQTable()
 
-# Hyperparameters
-alpha = 0.1
-gamma = 0.9
+
+alpha = 0.05
+gamma = 0.99
 epsilon = 1.0
 episodes = 50000
 
@@ -40,6 +40,7 @@ for i in range(episodes):
 
     while not done:
 
+        # Step
         next_observation, reward, terminated, truncated, _ = env.step(action)
         done = terminated or truncated
         next_state = getState(next_observation)
@@ -52,7 +53,7 @@ for i in range(episodes):
 
         score += reward
 
-        # SARSA UPDATE (On-policy)
+        # SARSA update (On-policy)
         Q[(state, action)] += alpha * (
             reward
             + gamma * Q[(next_state, next_action)]
@@ -64,21 +65,28 @@ for i in range(episodes):
 
     total_score[i] = score
 
-    epsilon = epsilon - 2 / episodes if epsilon > 0.01 else 0.01
-
+    # Exponential epsilon decay
+    epsilon = max(0.01, epsilon * 0.995)
 
 
 os.makedirs("results/mountaincar", exist_ok=True)
 
-save_obj(Q, "results/mountaincar/Q-table-SARSA")
-np.save("results/mountaincar/total_score_sarsa.npy", total_score)
+# Save Q-table
+save_obj(Q, "results/mountaincar/SARSA_best")
 
+# Save score array (FOR COMPARISON)
+np.save("results/mountaincar/score_SARSA_best.npy", total_score)
+
+# Save plot
 plt.plot(total_score)
 plt.xlabel("Episode")
 plt.ylabel("Total Reward")
-plt.title("SARSA - MountainCar")
-plt.savefig("results/mountaincar/sarsa_curve.png")
+plt.title("SARSA Best (alpha=0.05, gamma=0.99, exp decay)")
+plt.savefig("results/mountaincar/SARSA_best_curve.png")
 plt.close()
 
-print("\nSARSA Training Complete")
-print("Average reward (last 100 episodes):", np.mean(total_score[-100:]))
+# Final metric
+final_avg = np.mean(total_score[-100:])
+
+print("\nSARSA (Best) Training Complete")
+print("Average reward (last 100 episodes):", final_avg)

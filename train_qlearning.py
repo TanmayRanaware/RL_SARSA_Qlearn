@@ -5,11 +5,11 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
-# Create environment
+
 env = gym.make('MountainCar-v0')
 env._max_episode_steps = 1000
 
-# Create empty Q-table (dictionary)
+
 Q = createEmptyQTable()
 
 
@@ -17,8 +17,7 @@ alpha = 0.05
 gamma = 0.99
 epsilon = 1.0
 episodes = 50000
-epsilon_decay_type = "exp"   
-
+epsilon_decay_type = "exp"
 
 
 total_score = np.zeros(episodes)
@@ -37,7 +36,7 @@ for i in range(episodes):
 
     while not done:
 
-        # Epsilon-greedy action
+        # Epsilon-greedy action selection
         if random.uniform(0, 1) < epsilon:
             action = env.action_space.sample()
         else:
@@ -50,7 +49,7 @@ for i in range(episodes):
 
         score += reward
 
-        # TRUE Q-learning update
+        # Q-learning update (Off-policy)
         best_next_action = maxAction(Q, next_state)
 
         Q[(state, action)] += alpha * (
@@ -63,34 +62,28 @@ for i in range(episodes):
 
     total_score[i] = score
 
-    
-    if epsilon_decay_type == "linear_fast":
-        epsilon = epsilon - 2 / episodes if epsilon > 0.01 else 0.01
-
-    elif epsilon_decay_type == "linear_slow":
-        epsilon = epsilon - 1 / episodes if epsilon > 0.01 else 0.01
-
-    elif epsilon_decay_type == "exp":
-        epsilon = max(0.01, epsilon * 0.995)
+    # Exponential epsilon decay
+    epsilon = max(0.01, epsilon * 0.995)
 
 
 os.makedirs("results/mountaincar", exist_ok=True)
 
-experiment_name = f"Qlearning_a{alpha}_g{gamma}_{epsilon_decay_type}"
+# Save Q-table
+save_obj(Q, "results/mountaincar/Qlearning_best")
 
-save_obj(Q, f"results/mountaincar/{experiment_name}")
-np.save(f"results/mountaincar/score_{experiment_name}.npy", total_score)
+# Save score array (FOR COMPARISON)
+np.save("results/mountaincar/score_Qlearning_best.npy", total_score)
 
+# Save plot
 plt.plot(total_score)
 plt.xlabel("Episode")
 plt.ylabel("Total Reward")
-plt.title(f"Q-Learning ({experiment_name})")
-plt.savefig(f"results/mountaincar/{experiment_name}.png")
+plt.title("Q-Learning Best (alpha=0.05, gamma=0.99, exp decay)")
+plt.savefig("results/mountaincar/Qlearning_best_curve.png")
 plt.close()
 
-
+# Final metric
 final_avg = np.mean(total_score[-100:])
 
-print("\nQ-Learning Training Complete")
-print("Experiment:", experiment_name)
+print("\nQ-Learning (Best) Training Complete")
 print("Average reward (last 100 episodes):", final_avg)
