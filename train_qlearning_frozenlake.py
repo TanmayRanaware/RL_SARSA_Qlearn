@@ -10,11 +10,12 @@ env = gym.make("FrozenLake-v1", is_slippery=True)
 
 Q = np.zeros((env.observation_space.n, env.action_space.n))
 
-
 alpha = 0.1
-gamma = 0.99
+gamma = 0.999
 epsilon = 1.0
 episodes = 20000
+epsilon_decay_type = "exp"  # change per experiment
+
 
 total_rewards = np.zeros(episodes)
 
@@ -48,20 +49,29 @@ for i in range(episodes):
 
     total_rewards[i] = total_reward
 
-    # Exponential epsilon decay
-    epsilon = max(0.01, epsilon * 0.995)
+
+    if epsilon_decay_type == "linear_fast":
+        epsilon = epsilon - 2 / episodes if epsilon > 0.01 else 0.01
+
+    elif epsilon_decay_type == "linear_slow":
+        epsilon = epsilon - 1 / episodes if epsilon > 0.01 else 0.01
+
+    elif epsilon_decay_type == "exp":
+        epsilon = max(0.01, epsilon * 0.999)
 
 
 os.makedirs("results/frozenlake", exist_ok=True)
 
-np.save("results/frozenlake/score_Qlearning_frozenlake.npy", total_rewards)
+experiment_name = f"Frozen_Q_a{alpha}_g{gamma}_{epsilon_decay_type}"
+
+np.save(f"results/frozenlake/{experiment_name}.npy", total_rewards)
 
 plt.plot(total_rewards)
 plt.xlabel("Episode")
 plt.ylabel("Reward")
-plt.title("Q-Learning - FrozenLake")
-plt.savefig("results/frozenlake/Qlearning_frozenlake.png")
+plt.title(experiment_name)
+plt.savefig(f"results/frozenlake/{experiment_name}.png")
 plt.close()
 
-print("\nQ-Learning FrozenLake Complete")
+print("\nExperiment:", experiment_name)
 print("Success Rate (last 1000 episodes):", np.mean(total_rewards[-1000:]))
